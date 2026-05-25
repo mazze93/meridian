@@ -39,7 +39,8 @@ final class DocumentModelTests: XCTestCase {
         doc.contextProfileMappings[record.meridianID] = ["dev-uuid", "ops-uuid"]
         doc.softHolds["sh-1"] = SoftHoldRecord(
             id: "sh-1", title: "Maybe lunch", startDate: fixedDate,
-            endDate: fixedDate.addingTimeInterval(3600), createdAt: fixedDate
+            endDate: fixedDate.addingTimeInterval(3600),
+            contextProfiles: ["dev-uuid", "mutual-aid-uuid"], createdAt: fixedDate
         )
         doc.buffers["bf-1"] = BufferRecord(
             id: "bf-1", eventRef: "evt-1", leadingSeconds: 600,
@@ -49,6 +50,24 @@ final class DocumentModelTests: XCTestCase {
         let data = try JSONEncoder().encode(doc)
         let decoded = try JSONDecoder().decode(EventDoc.self, from: data)
         XCTAssertEqual(decoded, doc)
+    }
+
+    func testSoftHoldContextProfilesDefaultEmptyAndRoundTrip() throws {
+        let unassigned = SoftHoldRecord(
+            id: "sh-2", title: "Open block", startDate: fixedDate,
+            endDate: fixedDate.addingTimeInterval(1800), createdAt: fixedDate
+        )
+        XCTAssertTrue(unassigned.contextProfiles.isEmpty)
+
+        let assigned = SoftHoldRecord(
+            id: "sh-3", title: "Tentative", startDate: fixedDate,
+            endDate: fixedDate.addingTimeInterval(1800),
+            contextProfiles: ["a-uuid", "b-uuid"], createdAt: fixedDate
+        )
+        let data = try JSONEncoder().encode(assigned)
+        let decoded = try JSONDecoder().decode(SoftHoldRecord.self, from: data)
+        XCTAssertEqual(decoded, assigned)
+        XCTAssertEqual(decoded.contextProfiles, ["a-uuid", "b-uuid"])
     }
 
     func testAffectDocCodableRoundTrip() throws {

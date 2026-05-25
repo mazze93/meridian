@@ -71,13 +71,27 @@ public struct SoftHoldRecord: Codable, Equatable, Sendable {
     public var title: String
     public var startDate: Date
     public var endDate: Date
+    // Context-profile IDs assigned to this hold. A set, not a single value: profile
+    // assignment is non-exclusive with no "primary" (D3 Property 1, audit #4). Empty =
+    // unassigned, which renders with equal weight and no fallback label (audit #9).
+    // Set-merge semantics (D2 merge table) require Automerge's native set type at sync
+    // step 3; Codable round-trips it as a JSON array, sufficient for the model layer.
+    public var contextProfiles: Set<String>
     public var createdAt: Date
 
-    public init(id: String, title: String, startDate: Date, endDate: Date, createdAt: Date) {
+    public init(
+        id: String,
+        title: String,
+        startDate: Date,
+        endDate: Date,
+        contextProfiles: Set<String> = [],
+        createdAt: Date
+    ) {
         self.id = id
         self.title = title
         self.startDate = startDate
         self.endDate = endDate
+        self.contextProfiles = contextProfiles
         self.createdAt = createdAt
     }
 }
