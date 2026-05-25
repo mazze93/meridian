@@ -24,8 +24,10 @@ neurodivergent users. Accessibility is structural, not additive.
 
 ## Build Commands
 
-> Project is pre-build. `Package.swift` does not exist yet. These commands apply once
-> Layer 1 scaffolding is in place.
+> The Swift package lives at `tools/meridian/` in the monorepo — run all commands from there.
+> `Package.swift` currently declares only the `MeridianCore` library + its test target.
+> `MeridianUI` / `MeridianApp` targets return at Layer 2, when they gain real sources
+> (SPM cannot build an empty-source target, and stubs are prohibited).
 
 ```bash
 # Resolve dependencies (run after Package.swift is created or updated)
@@ -41,7 +43,7 @@ swift test
 swift test --filter MeridianCoreTests
 
 # Run a single test method
-swift test --filter MeridianCoreTests/EventDocTests/testSerializationRoundTrip
+swift test --filter MeridianCoreTests/DocumentModelTests/testEventDocCodableRoundTrip
 
 # Build for release (use before measuring compacted document sizes)
 swift build -c release
@@ -100,6 +102,34 @@ Affect check-in control, baseline engine, prediction error computation,
 schedule review prompt, enrichment unlock system.
 
 The full Layer 1 pass/fail checklist is in `MERIDIAN_BUILD_CONTEXT.md` Part 4.
+
+---
+
+## Build Progress
+
+> Update this section as steps land. Dates are absolute (YYYY-MM-DD).
+
+### Layer 1 — Tailscale + CRDT Substrate (in progress)
+
+| Step | Status | Notes |
+|------|--------|-------|
+| 1. Package.swift + Automerge-Swift | ✅ done (2026-05-25) | Automerge-Swift pinned `from: "0.7.2"`. Manifest trimmed to `MeridianCore` only. |
+| 2. EventDoc + AffectDoc structs | ✅ done (2026-05-25) | All records Codable/Equatable/Sendable. 7/7 model tests pass (`DocumentModelTests`). |
+| 3. Init, serialization, encrypted local persistence | ⬜ NEXT | Automerge encode/decode of both docs + encrypted on-disk store keyed from Keychain. Not UserDefaults, not plaintext. Must survive app kill + relaunch. |
+| 4. Compaction logic | ⬜ pending | `compact()` on background (>7d) and post-sync (>20% growth). See Compaction Triggers. |
+| 5. Local HTTP server on :47301 | ⬜ pending | Bind Tailscale interface only; never non-Tailscale. `MeridianAuth` header validated. |
+| 6. Peer discovery + binary delta sync | ⬜ pending | Endpoints in Sync Protocol section. |
+| 7. MeridianAuth shared secret via Keychain | ⬜ pending | Shared secret from Keychain; never hardcoded, never UserDefaults. |
+
+**Schema fields resolved this session (2026-05-25):**
+- `SoftHoldRecord`: `id`, `title`, `startDate`, `endDate`, `contextProfiles: Set<String>`, `createdAt`.
+  Soft holds carry context-profile assignments (founder decision) — non-exclusive, no primary
+  (D3 Property 1, audit #4); empty set = unassigned, renders with equal weight, no fallback label (audit #9).
+- `BufferRecord`: `id`, `eventRef`, `leadingSeconds`, `trailingSeconds`, `createdAt`.
+  Separate leading/trailing per spec wording "before and/or after."
+
+**Next action:** Layer 1 step 3 — Automerge encode/decode for `EventDoc`/`AffectDoc` plus an
+encrypted local store whose key is held in Keychain. Do not start Layer 2/3 while Layer 1 is open.
 
 ---
 
@@ -202,6 +232,25 @@ struct AffectCheckIn: Codable {
     var submittedAt: Date
     var epsilon: Float?       // nil if bucket is FORMING
     var isHighError: Bool
+}
+
+// SoftHoldRecord — provisional, uncommitted time block
+struct SoftHoldRecord: Codable {
+    var id: String
+    var title: String
+    var startDate: Date
+    var endDate: Date
+    var contextProfiles: Set<String>  // profile UUIDs; non-exclusive, no primary; empty = unassigned
+    var createdAt: Date
+}
+
+// BufferRecord — protected breathing room around an event
+struct BufferRecord: Codable {
+    var id: String
+    var eventRef: String      // EventRecord.meridianID
+    var leadingSeconds: TimeInterval   // before the event
+    var trailingSeconds: TimeInterval  // after the event
+    var createdAt: Date
 }
 ```
 
