@@ -1,6 +1,9 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
+// MeridianUI and MeridianApp targets are introduced at Layer 2, when they gain sources.
+// SPM cannot build a target with an empty source directory, and CLAUDE.md forbids stubs,
+// so the manifest declares only the targets that currently have real code.
 let package = Package(
     name: "Meridian",
     platforms: [
@@ -9,8 +12,6 @@ let package = Package(
     ],
     products: [
         .library(name: "MeridianCore", targets: ["MeridianCore"]),
-        .library(name: "MeridianUI", targets: ["MeridianUI"]),
-        .library(name: "MeridianApp", targets: ["MeridianApp"]),
     ],
     dependencies: [
         .package(
@@ -25,21 +26,9 @@ let package = Package(
                 .product(name: "Automerge", package: "automerge-swift"),
             ]
         ),
-        .target(
-            name: "MeridianUI",
-            dependencies: ["MeridianCore"]
-        ),
-        .target(
-            name: "MeridianApp",
-            dependencies: ["MeridianUI"]
-        ),
         .testTarget(
             name: "MeridianCoreTests",
             dependencies: ["MeridianCore"]
-        ),
-        .testTarget(
-            name: "MeridianUITests",
-            dependencies: ["MeridianUI", "MeridianCore"]
         ),
     ]
 )
