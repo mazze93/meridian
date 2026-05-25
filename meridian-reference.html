@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian — Build Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Mona+Sans:ital,wdth,wght@0,75..125,200..900;1,75..125,200..900&display=swap" rel="stylesheet">
+
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────────────────── */
+:root {
+  --bg:           #0d0f0f;
+  --bg-raise:     #131616;
+  --bg-surface:   #181c1c;
+  --bg-elevated:  #1e2323;
+  --border:       #252b2b;
+  --border-mid:   #2e3636;
+  --border-light: #3a4444;
+
+  --text-primary:   #e8ede8;
+  --text-secondary: #8fa89a;
+  --text-tertiary:  #526060;
+  --text-inverse:   #0d0f0f;
+
+  /* Single accent — a cold teal. Not warm. Not "success green". */
+  --accent:         #4db89a;
+  --accent-dim:     #2d6e5c;
+  --accent-faint:   #1a3d34;
+  --accent-glow:    rgba(77, 184, 154, 0.08);
+
+  /* State colors — affect-neutral. No green=good, red=bad. */
+  --state-a:  #7b9eb8;  /* muted blue */
+  --state-b:  #b89a7b;  /* muted amber */
+  --state-c:  #9b7bb8;  /* muted violet */
+
+  --radius-sm: 3px;
+  --radius:    6px;
+  --radius-lg: 10px;
+
+  --font-serif:  'Instrument Serif', Georgia, serif;
+  --font-mono:   'DM Mono', 'Courier New', monospace;
+  --font-sans:   'Mona Sans', system-ui, sans-serif;
+
+  --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── RESET ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: 350;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── GRID NOISE TEXTURE ────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(77,184,154,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 85% 90%, rgba(123,158,184,0.03) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── SIDEBAR ────────────────────────────────────────────────────────────── */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  padding: 2rem 0;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+.sidebar-logo {
+  padding: 0 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-logo .wordmark {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  display: block;
+}
+
+.sidebar-logo .tagline {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0.25rem;
+}
+
+.sidebar-logo .layer-badge {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  background: var(--accent-faint);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.nav-section {
+  padding: 0 1rem 1.5rem;
+}
+
+.nav-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  padding: 0 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.nav-item {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  transition: color var(--transition), background var(--transition);
+  cursor: pointer;
+}
+.nav-item:hover { color: var(--text-primary); background: var(--bg-surface); }
+.nav-item.active { color: var(--accent); background: var(--accent-glow); }
+
+/* ─── MAIN CONTENT ───────────────────────────────────────────────────────── */
+.main {
+  padding: 3rem 3.5rem;
+  max-width: 860px;
+}
+
+/* ─── PAGE HEADER ────────────────────────────────────────────────────────── */
+.page-header {
+  margin-bottom: 3.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-header .pre-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.page-header .pre-label::before {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 1px;
+  background: var(--accent-dim);
+}
+
+.page-header h1 {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-bottom: 1rem;
+}
+
+.page-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+/* ─── SECTIONS ───────────────────────────────────────────────────────────── */
+.section {
+  margin-bottom: 3.5rem;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fadeUp 0.5s ease forwards;
+}
+
+.section:nth-child(1) { animation-delay: 0.05s; }
+.section:nth-child(2) { animation-delay: 0.12s; }
+.section:nth-child(3) { animation-delay: 0.19s; }
+.section:nth-child(4) { animation-delay: 0.26s; }
+.section:nth-child(5) { animation-delay: 0.33s; }
+.section:nth-child(6) { animation-delay: 0.40s; }
+.section:nth-child(7) { animation-delay: 0.47s; }
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section { opacity: 1; transform: none; animation: none; }
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+p {
+  color: var(--text-secondary);
+  margin-bottom: 0.875rem;
+  max-width: 620px;
+}
+
+strong { color: var(--text-primary); font-weight: 500; }
+
+/* ─── DECISION TABLE ─────────────────────────────────────────────────────── */
+.decision-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.decision-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  background: var(--bg-surface);
+  transition: background var(--transition);
+}
+.decision-row:hover { background: var(--bg-elevated); }
+
+.decision-id {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.875rem;
+  font-weight: 500;
+}
+
+.decision-body {
+  padding: 0.75rem 1rem;
+}
+
+.decision-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.decision-value {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ─── CLOSED BADGE ───────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+.badge-closed {
+  background: var(--accent-faint);
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+}
+.badge-layer {
+  background: rgba(123,158,184,0.08);
+  border: 1px solid rgba(123,158,184,0.2);
+  color: var(--state-a);
+}
+.badge-needs-decision {
+  background: rgba(184,154,123,0.08);
+  border: 1px solid rgba(184,154,123,0.2);
+  color: var(--state-b);
+}
+
+/* ─── CODE BLOCKS ────────────────────────────────────────────────────────── */
+pre {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+pre::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0.625rem;
+  right: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+:not(pre) > code {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+/* ─── AFFECT MODEL VISUALIZATION ─────────────────────────────────────────── */
+.affect-demo {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.affect-demo-title {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: 1.25rem;
+}
+
+.affect-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.affect-axis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.axis-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.axis-range {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  margin-bottom: 0.25rem;
+}
+
+.axis-track {
+  height: 3px;
+  background: var(--border-mid);
+  border-radius: 2px;
+  position: relative;
+  overflow: visible;
+}
+
+.axis-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.axis-fill-v { background: linear-gradient(90deg, var(--border-mid), var(--accent)); }
+.axis-fill-a { background: linear-gradient(90deg, var(--border-mid), var(--state-a)); }
+.axis-fill-c { background: linear-gradient(90deg, var(--border-mid), var(--state-c)); }
+
+.axis-note {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ─── FORMULA BLOCK ──────────────────────────────────────────────────────── */
+.formula {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent-dim);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 2;
+}
+
+.formula .formula-var { color: var(--accent); }
+.formula .formula-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+}
+
+/* ─── BUCKET TABLE ───────────────────────────────────────────────────────── */
+.bucket-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.bucket-cell {
+  background: var(--bg-surface);
+  padding: 0.875rem 1rem;
+  transition: background var(--transition);
+}
+.bucket-cell:hover { background: var(--bg-elevated); }
+
+.bucket-cell.header {
+  background: var(--bg-elevated);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.bucket-id {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+
+.bucket-hours {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ─── LAYER SEQUENCE ─────────────────────────────────────────────────────── */
+.layer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 1.5rem;
+}
+
+.layer-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.layer-card:hover { border-color: var(--border-light); }
+.layer-card.active { border-color: var(--accent-dim); }
+
+.layer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+}
+
+.layer-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.layer-number.blocker { background: var(--accent-faint); border: 1px solid var(--accent-dim); color: var(--accent); }
+.layer-number.pending { background: var(--bg-elevated); border: 1px solid var(--border-mid); color: var(--text-tertiary); }
+
+.layer-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.layer-card-body {
+  padding: 0 1.25rem 1rem;
+  display: none;
+}
+.layer-card.active .layer-card-body { display: block; }
+
+.layer-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.layer-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  padding: 0.375rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.layer-steps li::before {
+  content: '→';
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent-dim);
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+/* ─── PROFILE CHIPS ──────────────────────────────────────────────────────── */
+.profile-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  cursor: default;
+}
+.profile-chip:hover {
+  border-color: var(--border-light);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.profile-uuid {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+}
+
+/* ─── PROMPT CARD ────────────────────────────────────────────────────────── */
+.prompt-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.prompt-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-dim);
+}
+
+.prompt-bucket {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.75rem;
+}
+
+.prompt-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: none;
+  margin-bottom: 0.875rem;
+}
+
+.prompt-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+/* ─── CULTURAL QA PROPERTIES ─────────────────────────────────────────────── */
+.qa-property {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+  transition: border-color var(--transition);
+}
+.qa-property:hover { border-color: var(--border-light); }
+
+.qa-property-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.qa-number {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--accent);
+  font-weight: 500;
+  background: var(--accent-faint);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.4rem;
+}
+
+.qa-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.qa-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: none;
+  margin: 0;
+}
+
+/* ─── SEPARATOR / HORIZONTAL RULE ────────────────────────────────────────── */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* ─── SCROLLBAR ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .main { padding: 2rem 1.5rem; }
+  .affect-grid { grid-template-columns: 1fr; }
+  .bucket-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────────────── -->
+  <nav class="sidebar" aria-label="Document navigation">
+    <div class="sidebar-logo">
+      <span class="wordmark">Meridian</span>
+      <span class="tagline">Build Reference v1.0</span>
+      <span class="layer-badge">⬡ Layer 1 active</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Product</div>
+      <a class="nav-item active" href="#overview">Overview</a>
+      <a class="nav-item" href="#layers">Build Layers</a>
+      <a class="nav-item" href="#profiles">Context Profiles</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Affect Model</div>
+      <a class="nav-item" href="#affect-theory">Barrett Theory</a>
+      <a class="nav-item" href="#dimensions">Dimensions</a>
+      <a class="nav-item" href="#buckets">Time Buckets</a>
+      <a class="nav-item" href="#prediction">Prediction Error</a>
+      <a class="nav-item" href="#prompts">Prompt Copy</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Sync</div>
+      <a class="nav-item" href="#crdt">CRDT Decision</a>
+      <a class="nav-item" href="#schema">Schema</a>
+      <a class="nav-item" href="#protocol">Protocol</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">QA</div>
+      <a class="nav-item" href="#cultural">Cultural Competence</a>
+      <a class="nav-item" href="#decisions">Decision Index</a>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ────────────────────────────────────────────────────────────── -->
+  <main class="main" role="main">
+
+    <header class="page-header">
+      <div class="pre-label">Pre-Engineering Decision Record</div>
+      <h1>Meridian<br><em>Build Reference</em></h1>
+      <p class="subtitle">
+        A privacy-first, local-first calendar for Apple platforms.
+        Sync over Tailscale only — peer mesh, 1–3 devices.
+        No cloud. No server. No backend.
+      </p>
+    </header>
+
+    <!-- ── OVERVIEW ──────────────────────────────────────────────────────── -->
+    <section class="section" id="overview">
+      <div class="section-label">01 — Product</div>
+      <h2>What Meridian Is</h2>
+      <p>
+        A calendar grounded in Lisa Feldman Barrett's constructed emotion theory.
+        The affect layer exists not to track mood but to surface schedule patterns —
+        using Euclidean prediction error in three-dimensional affect space as a signal
+        for when a time window is running differently than the user's own history predicts.
+      </p>
+      <p>
+        The system's only response to detected pattern deviation is a schedule-review
+        prompt. It never names an emotion. It never suggests a cause.
+        It never fires from a single data point.
+      </p>
+
+      <div class="decision-grid" style="margin-top: 1.5rem;">
+        <div class="decision-row">
+          <div class="decision-id">stack</div>
+          <div class="decision-body">
+            <div class="decision-title">SwiftUI throughout</div>
+            <div class="decision-value">iPhone · iPad · macOS menu bar. No Electron, no React Native, no cross-platform bridges. v1 ships revenue-generating Apple product before any Rust translation layer.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">sync</div>
+          <div class="decision-body">
+            <div class="decision-title">Tailscale only</div>
+            <div class="decision-value">Peer mesh transport. Cloud adjacency is not a tradeoff — it is a category error for this product. Any architecture introducing cloud dependency is a different product.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">CRDT</div>
+          <div class="decision-body">
+            <div class="decision-title">Automerge-Swift</div>
+            <div class="decision-value">Pure Swift, ARM-native, no FFI. Correct offline-first convergence without a linearization point. <span class="badge badge-closed">closed D2-01</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── BUILD LAYERS ───────────────────────────────────────────────────── -->
+    <section class="section" id="layers">
+      <div class="section-label">02 — Sequence</div>
+      <h2>Build Layer Sequence <span class="badge badge-layer">enforced</span></h2>
+      <p>Layer 1 is a hard blocker. No Layer 2 or 3 code is generated until Layer 1 passes its checklist.</p>
+
+      <div class="layer-stack" style="margin-top: 1.25rem;">
+        <div class="layer-card active">
+          <div class="layer-card-header" onclick="this.closest('.layer-card').classList.toggle('active')">
+            <div class="layer-number blocker">1</div>
+            <div class="layer-name">Tailscale + CRDT Substrate</div>
+            <span class="badge badge-layer">current</span>
+          </div>
+          <div class="layer-card-body">
+            <ul class="layer-steps">
+              <li>Package.swift with Automerge-Swift dependency (pinned version)</li>
+              <li>EventDoc and AffectDoc struct definitions</li>
+              <li>Document initialization, serialization, encrypted local persistence</li>
+              <li>Compaction logic — background + post-sync triggers</li>
+              <li>Local HTTP server on port 47301 bound to Tailscale interface only</li>
+              <li>Peer discovery and binary delta sync protocol</li>
+              <li>MeridianAuth shared secret via Keychain</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header" onclick="this.closest('.layer-card').classList.toggle('active')">
+            <div class="layer-number pending">2</div>
+            <div class="layer-name">Calendar Core UI</div>
+            <span class="badge badge-needs-decision">blocked</span>
+          </div>
+          <div class="layer-card-body">
+            <ul class="layer-steps">
+              <li>Temporal home screen — iPhone</li>
+              <li>iPad layout and Stage Manager contract</li>
+              <li>macOS menu bar popover</li>
+              <li>EventKit bridge</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header" onclick="this.closest('.layer-card').classList.toggle('active')">
+            <div class="layer-number pending">3</div>
+            <div class="layer-name">Affect + Enrichment</div>
+            <span class="badge badge-needs-decision">blocked</span>
+          </div>
+          <div class="layer-card-body">
+            <ul class="layer-steps">
+              <li>Affect check-in control (symmetric, no normative visual cues)</li>
+              <li>Baseline engine — per-bucket rolling window</li>
+              <li>Prediction error computation — Euclidean 3D</li>
+              <li>Schedule review prompt — inline card only</li>
+              <li>Enrichment unlock system — threshold-gated, never payment</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CONTEXT PROFILES ───────────────────────────────────────────────── -->
+    <section class="section" id="profiles">
+      <div class="section-label">03 — Identity</div>
+      <h2>Context Profiles <span class="badge badge-closed">closed D3-01</span></h2>
+      <p>
+        Five named defaults. Labels are user-editable strings — not enums.
+        Internal identifier is a stable UUID. Profile behavior travels with the UUID, not the label.
+        A rename does not produce a merge conflict.
+      </p>
+      <p>
+        Events may be assigned to multiple profiles simultaneously.
+        No profile is "primary." No profile implies it is for "serious" users and others for casual ones.
+      </p>
+
+      <div class="profile-grid">
+        <div class="profile-chip">Developer <span class="profile-uuid">uuid</span></div>
+        <div class="profile-chip">Ops <span class="profile-uuid">uuid</span></div>
+        <div class="profile-chip">Student <span class="profile-uuid">uuid</span></div>
+        <div class="profile-chip">Learner <span class="profile-uuid">uuid</span></div>
+        <div class="profile-chip">Minimal <span class="profile-uuid">uuid</span></div>
+      </div>
+
+      <p style="font-size: 0.8125rem; font-style: italic; color: var(--text-tertiary);">
+        Each label is user-renameable. The UUID is permanent. A mutual aid coordinator can rename "Ops" to "Organizing" — the profile remains behaviorally identical.
+      </p>
+    </section>
+
+    <!-- ── AFFECT THEORY ──────────────────────────────────────────────────── -->
+    <section class="section" id="affect-theory">
+      <div class="section-label">04 — Theory</div>
+      <h2>Barrett Constructed Emotion</h2>
+      <p>
+        Lisa Feldman Barrett's active inference account (PMC5390700) establishes the constraints
+        this system operates under. The brain generates top-down predictions about internal body state.
+        Conscious affect is the brain's best guess, updated by incoming signals.
+      </p>
+      <p>
+        <strong>Critical implication:</strong> Meridian's prediction error signal is not a proxy for
+        "the user is stressed." It is a proxy for "this time window is producing more physiological
+        uncertainty than the user's own history predicts it should." The response is a schedule
+        observation — not a wellness intervention.
+      </p>
+
+      <h3>What the system must never do</h3>
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--state-b);">never</div>
+          <div class="decision-body">
+            <div class="decision-value">Name an emotion category. Emotion words are user-constructed. The system has no access to them.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--state-b);">never</div>
+          <div class="decision-body">
+            <div class="decision-value">Display valence or arousal as a self-description. Showing "your average valence is −0.4" produces iatrogenic mood effects.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--state-b);">never</div>
+          <div class="decision-body">
+            <div class="decision-value">Suggest a cause for prediction error. The system sees dimensions and schedule data. Causal claims are confabulation.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--state-b);">never</div>
+          <div class="decision-body">
+            <div class="decision-value">Fire a response from a single high-error check-in, regardless of ε magnitude. One point is noise.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--state-b);">never</div>
+          <div class="decision-body">
+            <div class="decision-value">Surface prediction error magnitude. ε is internal. Showing it creates gamification dynamics that distort future check-in behavior.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DIMENSIONS ─────────────────────────────────────────────────────── -->
+    <section class="section" id="dimensions">
+      <div class="section-label">05 — Dimensions</div>
+      <h2>Affect Dimensions</h2>
+      <p>Three continuous axes stored as Float32. No rounding at storage time.</p>
+
+      <div class="affect-demo">
+        <div class="affect-demo-title">Dimension reference — Float32 storage</div>
+        <div class="affect-grid">
+          <div class="affect-axis">
+            <div class="axis-label">Valence</div>
+            <div class="axis-range"><span>−1.0</span><span>+1.0</span></div>
+            <div class="axis-track"><div class="axis-fill axis-fill-v" style="width: 65%;"></div></div>
+            <div class="axis-note">Core affect valence — pleasant / unpleasant</div>
+          </div>
+          <div class="affect-axis">
+            <div class="axis-label">Arousal</div>
+            <div class="axis-range"><span>−1.0</span><span>+1.0</span></div>
+            <div class="axis-track"><div class="axis-fill axis-fill-a" style="width: 40%;"></div></div>
+            <div class="axis-note">Core affect arousal — activated / deactivated</div>
+          </div>
+          <div class="affect-axis">
+            <div class="axis-label">Clarity</div>
+            <div class="axis-range"><span>0.0</span><span>1.0</span></div>
+            <div class="axis-track"><div class="axis-fill axis-fill-c" style="width: 75%;"></div></div>
+            <div class="axis-note">Interoceptive precision weighting — clear / foggy</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-tertiary);">
+        The color treatment above is symmetric and direction-neutral.
+        No axis direction maps to "good" or "bad." This constraint carries directly into the check-in UI.
+      </p>
+    </section>
+
+    <!-- ── TIME BUCKETS ───────────────────────────────────────────────────── -->
+    <section class="section" id="buckets">
+      <div class="section-label">06 — Buckets</div>
+      <h2>Time-Window Buckets</h2>
+      <p>
+        Six buckets total. Each bucket has an independent baseline.
+        A check-in is assigned to exactly one bucket based on local time at submission.
+        Midnight–05:00 is assigned to the previous day's <code>wXXX-evening</code> bucket.
+      </p>
+
+      <div class="bucket-grid">
+        <div class="bucket-cell header">Weekday</div>
+        <div class="bucket-cell header">Weekend</div>
+        <div class="bucket-cell header">Hours (local)</div>
+
+        <div class="bucket-cell">
+          <div class="bucket-id">wday-morning</div>
+          <div class="bucket-hours">Mon–Fri</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-id">wend-morning</div>
+          <div class="bucket-hours">Sat–Sun</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-hours">05:00 – 11:59</div>
+        </div>
+
+        <div class="bucket-cell">
+          <div class="bucket-id">wday-midday</div>
+          <div class="bucket-hours">Mon–Fri</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-id">wend-midday</div>
+          <div class="bucket-hours">Sat–Sun</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-hours">12:00 – 16:59</div>
+        </div>
+
+        <div class="bucket-cell">
+          <div class="bucket-id">wday-evening</div>
+          <div class="bucket-hours">Mon–Fri</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-id">wend-evening</div>
+          <div class="bucket-hours">Sat–Sun</div>
+        </div>
+        <div class="bucket-cell">
+          <div class="bucket-hours">17:00 – 23:59</div>
+        </div>
+      </div>
+
+      <h3>Baseline states</h3>
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id">FORMING</div>
+          <div class="decision-body"><div class="decision-value">Fewer than 7 check-ins. No prediction error computed. Internal only — no UI indication.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="font-size: 0.6rem;">FORMING_EXT</div>
+          <div class="decision-body"><div class="decision-value">≥7 check-ins but σ exceeds stability threshold on any dimension. Re-evaluated after each new check-in.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">STABLE</div>
+          <div class="decision-body"><div class="decision-value">σ_V &lt; 0.30 AND σ_A &lt; 0.30 AND σ_C &lt; 0.25. Prediction error active.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">DORMANT</div>
+          <div class="decision-body"><div class="decision-value">No check-ins in 45 consecutive days. Re-enters FORMING on next check-in automatically.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PREDICTION ERROR ───────────────────────────────────────────────── -->
+    <section class="section" id="prediction">
+      <div class="section-label">07 — Signal</div>
+      <h2>Prediction Error</h2>
+
+      <div class="formula">
+        <span class="formula-label">Euclidean distance in 3D affect space</span>
+        <span class="formula-var">ε</span> = √( (<span class="formula-var">V</span><sub>new</sub> − <span class="formula-var">µ_V</span>)² + (<span class="formula-var">A</span><sub>new</sub> − <span class="formula-var">µ_A</span>)² + (<span class="formula-var">C</span><sub>new</sub> − <span class="formula-var">µ_C</span>)² )
+      </div>
+
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id">max ε</div>
+          <div class="decision-body"><div class="decision-value">√(4 + 4 + 1) = 3.0 — maximum possible distance across all three dimensions at their extremes.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">threshold</div>
+          <div class="decision-body"><div class="decision-value"><strong>ε_threshold = 0.85</strong> — ~28% of maximum distance. Approximately 2–3 combined standard deviations. <span class="badge badge-closed">D1-05</span></div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">trigger</div>
+          <div class="decision-body"><div class="decision-value"><strong>N = 3</strong> high-error check-ins in the same bucket within a rolling 7-day window. Not calendar week — rolling from most recent check-in timestamp. <span class="badge badge-closed">D1-06</span></div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">cooldown</div>
+          <div class="decision-body"><div class="decision-value">14 days per bucket after prompt shown or dismissed. No further prompts for that bucket during cooldown. <span class="badge badge-closed">D1-07</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PROMPT COPY ─────────────────────────────────────────────────────── -->
+    <section class="section" id="prompts">
+      <div class="section-label">08 — Copy</div>
+      <h2>Schedule Review Prompt <span class="badge badge-closed">locked</span></h2>
+      <p>
+        Placement: inline card in day view, bottom of event stack.
+        Never modal. Never push notification. Never menu bar popover.
+        Card persists until dismissed — does not auto-hide.
+      </p>
+
+      <div class="prompt-card">
+        <div class="prompt-bucket">wday-morning</div>
+        <p class="prompt-text">
+          This morning window has been running differently than your usual mornings.<br>
+          Your last few check-ins here landed further from your typical range. Worth a look at what's loading up before noon?
+        </p>
+        <div class="prompt-cta">Review morning blocks →</div>
+      </div>
+
+      <div class="prompt-card">
+        <div class="prompt-bucket">wday-midday</div>
+        <p class="prompt-text">
+          This afternoon pattern looks heavier than your afternoons usually do.<br>
+          Something in this window is landing differently than your baseline. Want to look at how much is stacking here?
+        </p>
+        <div class="prompt-cta">Review afternoon blocks →</div>
+      </div>
+
+      <div class="prompt-card">
+        <div class="prompt-bucket">wend-* (any weekend bucket)</div>
+        <p class="prompt-text">
+          This part of your weekend has been running differently lately.<br>
+          Your check-ins here have been outside your usual range. Worth a look at what you're holding in this time?
+        </p>
+        <div class="prompt-cta">Review this block →</div>
+      </div>
+
+      <h3>Copy prohibitions — zero exceptions</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem;">
+        <code>stress</code><code>anxiety</code><code>burnout</code><code>overwhelm</code>
+        <code>exhaustion</code><code>tired</code><code>drained</code><code>frustrated</code>
+        <code>excited</code><code>because of</code><code>due to</code><code>you should</code>
+        <code>try to</code><code>make sure</code><code>primary profile</code><code>Other</code>
+      </div>
+    </section>
+
+    <!-- ── CRDT DECISION ──────────────────────────────────────────────────── -->
+    <section class="section" id="crdt">
+      <div class="section-label">09 — Sync</div>
+      <h2>CRDT Selection <span class="badge badge-closed">closed D2-01</span></h2>
+
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--accent);">selected</div>
+          <div class="decision-body">
+            <div class="decision-title">Automerge-Swift</div>
+            <div class="decision-value">Pure Swift, ARM-native via Xcode toolchain. No FFI. Correct offline-first convergence. Only candidate satisfying all three hard constraints simultaneously.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--text-tertiary);">out</div>
+          <div class="decision-body">
+            <div class="decision-title">Y.js / Yrs via C FFI</div>
+            <div class="decision-value">Rust FFI bridge. Second toolchain. Invisible to LLDB. Breaks on Xcode updates. 40–60% memory advantage not meaningful at Meridian's v1 workload size.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--text-tertiary);">out</div>
+          <div class="decision-body">
+            <div class="decision-title">SQLite + LWW</div>
+            <div class="decision-value">Structurally broken under clock skew in a peer mesh without NTP-synchronized server. Silent destructive overwrites. No history. No recovery.</div>
+          </div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="color: var(--text-tertiary);">out</div>
+          <div class="decision-body">
+            <div class="decision-title">Custom OT</div>
+            <div class="decision-value">Requires a linearization point — a server or consensus node. Incompatible with Tailscale-only architecture. Eliminated immediately.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SCHEMA ─────────────────────────────────────────────────────────── -->
+    <section class="section" id="schema">
+      <div class="section-label">10 — Schema</div>
+      <h2>Data Schema</h2>
+
+<pre data-lang="swift"><code>// EventDoc — top-level CRDT document
+struct EventDoc: Codable {
+    var schemaVersion: Int
+    var events: [String: EventRecord]            // keyed by Meridian UUID
+    var contextProfileMappings: [String: [String]] // eventID → [profileIDs]
+    var softHolds: [String: SoftHoldRecord]
+    var buffers: [String: BufferRecord]
+}
+
+// AffectDoc — separate CRDT document
+struct AffectDoc: Codable {
+    var schemaVersion: Int
+    var checkIns: [String: AffectCheckIn]        // keyed by UUID
+    var bucketBaselines: [String: BucketBaseline]
+    var promptLog: [String: PromptLogEntry]
+}
+
+// AffectCheckIn
+struct AffectCheckIn: Codable {
+    var id: String
+    var valence: Float        // −1.0 to +1.0
+    var arousal: Float        // −1.0 to +1.0
+    var clarity: Float        //  0.0 to +1.0
+    var bucketID: String
+    var eventRef: String?     // optional link to EventRecord.meridianID
+    var submittedAt: Date
+    var epsilon: Float?       // nil if bucket is FORMING — never surfaced to user
+    var isHighError: Bool
+}</code></pre>
+
+      <h3>Merge semantics</h3>
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id" style="font-size: 0.62rem;">title, loc, notes</div>
+          <div class="decision-body"><div class="decision-value">Register — deterministic winner, losing value retained in history.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="font-size: 0.62rem;">startDate, endDate</div>
+          <div class="decision-body"><div class="decision-value">Register — later actor wins. Both values in history.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="font-size: 0.62rem;">profileMappings</div>
+          <div class="decision-body"><div class="decision-value">Set — additive merge. Both offline additions survive. Correct behavior.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id" style="font-size: 0.62rem;">checkIns</div>
+          <div class="decision-body"><div class="decision-value">Map — concurrent additions merge cleanly. Unique UUIDs; no conflicts possible.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PROTOCOL ───────────────────────────────────────────────────────── -->
+    <section class="section" id="protocol">
+      <div class="section-label">11 — Transport</div>
+      <h2>Sync Protocol</h2>
+
+<pre data-lang="http"><code>GET  /meridian/sync/status
+     → { peerID, lastSyncAt, eventDocCursor, affectDocCursor }
+
+POST /meridian/sync/event-doc
+     Authorization: MeridianAuth [shared secret from Keychain]
+     body: Automerge binary delta since cursor
+
+POST /meridian/sync/affect-doc
+     Authorization: MeridianAuth [shared secret from Keychain]
+     body: Automerge binary delta since cursor</code></pre>
+
+      <div class="decision-grid">
+        <div class="decision-row">
+          <div class="decision-id">port</div>
+          <div class="decision-body"><div class="decision-value">47301 — user-configurable in Settings. Bound to Tailscale IP only. Does not bind to non-Tailscale interfaces.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">auth</div>
+          <div class="decision-body"><div class="decision-value">Shared secret in Keychain. Exchanged at device onboarding. Not hardcoded. Not in UserDefaults.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">triggers</div>
+          <div class="decision-body"><div class="decision-value">App foreground (last sync &gt; 5 min) · explicit tap · post-mutation debounced 30s.</div></div>
+        </div>
+        <div class="decision-row">
+          <div class="decision-id">delta size</div>
+          <div class="decision-body"><div class="decision-value">&lt; 50 KB per sync pair for typical daily usage (5–10 event mutations, 2–3 check-ins).</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CULTURAL COMPETENCE ────────────────────────────────────────────── -->
+    <section class="section" id="cultural">
+      <div class="section-label">12 — QA</div>
+      <h2>Cultural Competence</h2>
+      <p>
+        Cultural competence = the system does not require users to distort, hide, simplify,
+        or perform their lives differently in order to use the calendar effectively.
+        Not a values statement. Each property below is pass/fail from code audit.
+      </p>
+
+      <div style="margin-top: 1.25rem;">
+        <div class="qa-property">
+          <div class="qa-property-header">
+            <span class="qa-number">P1</span>
+            <span class="qa-title">Role Non-Exclusivity</span>
+          </div>
+          <p class="qa-desc">A single event is assignable to multiple context profiles. No language or UI implies one assignment is "correct" and others supplemental. "Other" as a catch-all is a fail condition.</p>
+        </div>
+
+        <div class="qa-property">
+          <div class="qa-property-header">
+            <span class="qa-number">P2</span>
+            <span class="qa-title">Profile Label Non-Othering</span>
+          </div>
+          <p class="qa-desc">The five defaults do not form an implicit hierarchy from "serious" to "casual." A mutual aid coordinator should not be forced between "Ops" (corporate framing) and "Minimal" (implies low-structure work).</p>
+        </div>
+
+        <div class="qa-property">
+          <div class="qa-property-header">
+            <span class="qa-number">P3</span>
+            <span class="qa-title">Enrichment Non-Normalization</span>
+          </div>
+          <p class="qa-desc">Affect-pairing logic does not position any cultural, spiritual, or productivity paradigm as the correct response to a given state. ≥30% of each content pool is culturally neutral. No opt-in gate for non-Western content.</p>
+        </div>
+
+        <div class="qa-property">
+          <div class="qa-property-header">
+            <span class="qa-number">P4</span>
+            <span class="qa-title">Temporal Home Screen Universal Readability</span>
+          </div>
+          <p class="qa-desc">Three time states (7am, 2pm, 10pm) work for non-conventional schedules, non-single-household contexts, and non-neurotypical morning relationships. "Workday," "your day," "tonight" in assumed contexts are fail signals.</p>
+        </div>
+
+        <div class="qa-property">
+          <div class="qa-property-header">
+            <span class="qa-number">P5</span>
+            <span class="qa-title">Affect Check-In Non-Prescriptiveness</span>
+          </div>
+          <p class="qa-desc">The check-in UI does not imply, through color, visual weight, or spatial metaphor, that any affect position is more desirable than another. High-valence/high-arousal corner rendered warmer or more saturated is a fail condition.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DECISION INDEX ─────────────────────────────────────────────────── -->
+    <section class="section" id="decisions">
+      <div class="section-label">13 — Index</div>
+      <h2>Closed Decision Index</h2>
+      <p>All decisions below are closed. Use decision IDs in commit messages and code comments. Do not re-litigate without founder explicitly saying "reopen [ID]."</p>
+
+      <div class="decision-grid" style="margin-top: 1.25rem;">
+        <div class="decision-row"><div class="decision-id">D1-01</div><div class="decision-body"><div class="decision-title">Minimum 7 check-ins before baseline computed per bucket</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-02</div><div class="decision-body"><div class="decision-title">Rolling 28-check-in window for baseline</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-03</div><div class="decision-body"><div class="decision-title">Stability threshold: σ &lt; 0.30 (V, A), σ &lt; 0.25 (C)</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-04</div><div class="decision-body"><div class="decision-title">Prediction error: Euclidean distance in 3D affect space</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-05</div><div class="decision-body"><div class="decision-title">ε_threshold = 0.85 (~28% of max distance of 3.0)</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-06</div><div class="decision-body"><div class="decision-title">N = 3 high-error check-ins in 7-day rolling window triggers prompt</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-07</div><div class="decision-body"><div class="decision-title">14-day cooldown after prompt shown per bucket</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-08</div><div class="decision-body"><div class="decision-title">Schedule review prompt is the only system response</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-09</div><div class="decision-body"><div class="decision-title">Emotion words prohibited in all system-generated copy</div></div></div>
+        <div class="decision-row"><div class="decision-id">D1-10</div><div class="decision-body"><div class="decision-title">Manual baseline reset per-bucket; auto-decay at 45 days</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-01</div><div class="decision-body"><div class="decision-title">Automerge-Swift selected as CRDT strategy</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-02</div><div class="decision-body"><div class="decision-title">Y.js/Yrs eliminated — Rust FFI overhead</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-03</div><div class="decision-body"><div class="decision-title">SQLite + LWW eliminated — clock skew failure</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-04</div><div class="decision-body"><div class="decision-title">Custom OT eliminated — requires server</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-05</div><div class="decision-body"><div class="decision-title">Two documents: EventDoc + AffectDoc</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-06</div><div class="decision-body"><div class="decision-title">Sync port: 47301 (user-configurable)</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-07</div><div class="decision-body"><div class="decision-title">Compaction: automatic on background + post-sync if &gt;20% growth</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-08</div><div class="decision-body"><div class="decision-title">Schema evolution: additive = no migration; non-additive = versioned migrate()</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-09</div><div class="decision-body"><div class="decision-title">Revisit trigger: compacted EventDoc &gt; 25 MB</div></div></div>
+        <div class="decision-row"><div class="decision-id">D2-10</div><div class="decision-body"><div class="decision-title">Cross-version sync: preserve unknown fields; migration warning to user</div></div></div>
+        <div class="decision-row"><div class="decision-id">D3-01</div><div class="decision-body"><div class="decision-title">Context profiles: user-editable strings; stable UUID internal key</div></div></div>
+        <div class="decision-row"><div class="decision-id">D3-02</div><div class="decision-body"><div class="decision-title">Cultural competence = system does not require life distortion</div></div></div>
+        <div class="decision-row"><div class="decision-id">D3-03</div><div class="decision-body"><div class="decision-title">Enrichment unlocks through use + affect thresholds — never payment</div></div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// Active nav on scroll
+const sections = document.querySelectorAll('section[id]');
+const navItems = document.querySelectorAll('.nav-item[href]');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navItems.forEach(item => {
+        item.classList.toggle('active', item.getAttribute('href') === `#${id}`);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<meridian>
+
+  <meta>
+    <version>1.0</version>
+    <status>pre-build</status>
+    <model>claude-opus-4-7</model>
+    <note>
+      All decisions in this file are closed. Do not re-litigate any decision
+      without the founder explicitly stating "reopen [decision ID]". If a
+      request would implicitly reopen a closed decision, surface that before
+      proceeding.
+    </note>
+  </meta>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PRODUCT
+  ════════════════════════════════════════════════════════════ -->
+
+  <product>
+    <name>Meridian</name>
+    <tagline>Privacy-first, local-first calendar for Apple platforms</tagline>
+    <platforms>
+      <platform>iPhone</platform>
+      <platform>iPad</platform>
+      <platform>macOS (menu bar)</platform>
+    </platforms>
+    <sync>Tailscale only — peer mesh, 1–3 personal devices. No cloud. No server. No iCloud sync.</sync>
+    <stack>SwiftUI throughout. No Electron. No React Native. No cross-platform bridges.</stack>
+    <users>
+      <user>Developers</user>
+      <user>Nonprofit operators</user>
+      <user>Students</user>
+      <user>Independent learners</user>
+      <user>Neurodivergent users</user>
+    </users>
+    <future>
+      Rust translation layer — cross-platform, fully open source.
+      Built after Meridian ships and generates revenue. Not in v1 scope.
+    </future>
+  </product>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       BUILD LAYER SEQUENCE — ENFORCED
+  ════════════════════════════════════════════════════════════ -->
+
+  <build_sequence>
+    <note>Layer 1 is a hard blocker. No Layer 2 or Layer 3 code until Layer 1 passes its checklist.</note>
+    <layer id="1" name="Tailscale + CRDT Substrate">
+      <step>Package.swift with Automerge-Swift dependency</step>
+      <step>EventDoc and AffectDoc struct definitions</step>
+      <step>Document initialization, serialization, encrypted local persistence</step>
+      <step>Compaction logic (background + post-sync triggers)</step>
+      <step>Local HTTP server on port 47301 bound to Tailscale interface</step>
+      <step>Peer discovery and binary delta sync protocol</step>
+      <step>MeridianAuth shared secret via Keychain</step>
+    </layer>
+    <layer id="2" name="Calendar Core UI">
+      <step>Temporal home screen (iPhone)</step>
+      <step>iPad layout and Stage Manager contract</step>
+      <step>macOS menu bar popover</step>
+      <step>EventKit bridge</step>
+    </layer>
+    <layer id="3" name="Affect + Enrichment">
+      <step>Affect check-in control</step>
+      <step>Baseline engine</step>
+      <step>Prediction error computation</step>
+      <step>Schedule review prompt</step>
+      <step>Enrichment unlock system</step>
+    </layer>
+  </build_sequence>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CLOSED DECISIONS — AFFECT MODEL
+  ════════════════════════════════════════════════════════════ -->
+
+  <decisions domain="affect_model">
+
+    <theory>
+      <source>Lisa Feldman Barrett — How Emotions Are Made (2017)</source>
+      <citation>PMC5390700</citation>
+      <constructs>
+        <construct name="interoceptive_prediction">
+          Brain generates top-down predictions about internal body state.
+          Conscious affect is the brain's best guess, updated by incoming signals.
+          (PMC5390700 §2)
+        </construct>
+        <construct name="prediction_error">
+          When afferent signals deviate from predictions, a prediction error is generated.
+          Large or repeated errors trigger allostatic recalibration.
+          (PMC5390700 §3.1)
+        </construct>
+        <construct name="allostatic_load">
+          Failure to successfully predict and prepare is experienced as effortfulness
+          or depletion — not as a named emotion. (PMC5390700 §3.3)
+        </construct>
+        <construct name="interoceptive_precision_weighting">
+          Brain weights signals by estimated reliability. Maps to the clarity dimension.
+          Low clarity = low precision on current interoceptive signals. (PMC5390700 §2.3)
+        </construct>
+        <construct name="emotion_categories_are_constructed">
+          Emotion words are constructions the brain uses to categorize continuous affect.
+          Meridian has no access to the user's emotion categories.
+          It has access to three continuous dimensions only.
+          It must never name an emotion. (Barrett, Ch. 1–2; PMC5390700 §1)
+        </construct>
+      </constructs>
+    </theory>
+
+    <dimensions>
+      <dimension name="valence"  range="-1.0 to +1.0" maps_to="core affect valence (pleasant–unpleasant)" storage="Float32"/>
+      <dimension name="arousal"  range="-1.0 to +1.0" maps_to="core affect arousal (activated–deactivated)" storage="Float32"/>
+      <dimension name="clarity"  range="0.0 to 1.0"   maps_to="interoceptive precision weighting (clear–foggy)" storage="Float32"/>
+    </dimensions>
+
+    <time_window_buckets>
+      <note>Midnight–05:00 assigned to previous day's wXXX-evening bucket.</note>
+      <bucket id="wday-morning" hours="05:00–11:59" days="Monday–Friday"/>
+      <bucket id="wday-midday"  hours="12:00–16:59" days="Monday–Friday"/>
+      <bucket id="wday-evening" hours="17:00–23:59" days="Monday–Friday"/>
+      <bucket id="wend-morning" hours="05:00–11:59" days="Saturday–Sunday"/>
+      <bucket id="wend-midday"  hours="12:00–16:59" days="Saturday–Sunday"/>
+      <bucket id="wend-evening" hours="17:00–23:59" days="Saturday–Sunday"/>
+    </time_window_buckets>
+
+    <decision id="D1-01">
+      <title>Minimum check-ins before baseline computed</title>
+      <value>7 check-ins per bucket before any baseline is computed. Below this: FORMING state. No prediction error computed.</value>
+      <rationale>Insufficient prior experience cannot form a reliable predictive model (Barrett §2).</rationale>
+    </decision>
+
+    <decision id="D1-02">
+      <title>Rolling baseline window</title>
+      <value>Most recent 28 check-ins in the bucket. Older check-ins retained in AffectDoc for export only.</value>
+      <rationale>Balances responsiveness to life change vs. noise; approx 4–6 week update cycle per bucket.</rationale>
+    </decision>
+
+    <decision id="D1-03">
+      <title>Stability threshold</title>
+      <value>
+        Bucket marked STABLE when: σ_V &lt; 0.30 AND σ_A &lt; 0.30 AND σ_C &lt; 0.25
+        If any dimension exceeds threshold: FORMING_EXTENDED — no prediction error computed.
+        FORMING, FORMING_EXTENDED, STABLE are internal only. No UI indication.
+      </value>
+      <rationale>~2–3 SD spread per dimension; proportional to each dimension's range.</rationale>
+    </decision>
+
+    <decision id="D1-04">
+      <title>Prediction error formula</title>
+      <value>
+        ε = √( (V_new − μ_V)² + (A_new − μ_A)² + (C_new − μ_C)² )
+        Maximum possible ε = √(4 + 4 + 1) = 3.0
+        Euclidean distance in 3D affect space between new check-in and bucket rolling mean.
+      </value>
+      <rationale>Standard distance metric; computationally simple; interpretable.</rationale>
+    </decision>
+
+    <decision id="D1-05">
+      <title>Significance threshold</title>
+      <value>ε_threshold = 0.85 (~28% of maximum distance of 3.0). ε ≥ 0.85 = high-error check-in for that bucket.</value>
+      <rationale>~2–3 SD combined deviation. Consistent with Barrett's allostatic recalibration criterion.</rationale>
+    </decision>
+
+    <decision id="D1-06">
+      <title>Prompt trigger</title>
+      <value>
+        count(high-error check-ins in same bucket, within rolling 7-day window) ≥ 3
+        Rolling window: from timestamp of most recent check-in in bucket, looking backward. Not calendar week.
+      </value>
+      <rationale>Repetition criterion from Barrett; single outliers are noise, not pattern.</rationale>
+    </decision>
+
+    <decision id="D1-07">
+      <title>Cooldown after prompt</title>
+      <value>14-day cooldown per bucket after prompt shown or dismissed. No further prompts for that bucket during cooldown.</value>
+      <rationale>Prevents prompt fatigue without requiring user management.</rationale>
+    </decision>
+
+    <decision id="D1-08">
+      <title>System response type</title>
+      <value>
+        Schedule review prompt is the ONLY system response.
+        No mood intervention. No wellness suggestion. No emotion category named.
+        Prompt placement: inline card in day view, bottom of event stack.
+        Never modal. Never push notification. Never menu bar popover.
+      </value>
+      <rationale>Meridian can observe schedule load. It cannot observe emotion categories.</rationale>
+    </decision>
+
+    <decision id="D1-09">
+      <title>Emotion word prohibition</title>
+      <value>
+        ZERO emotion words in all system-generated copy. No exceptions.
+        Prohibited words (and all derivatives):
+        stress, anxiety, burnout, overwhelm, exhaustion, tired, drained, frustrated, excited.
+        Prohibited constructions:
+        — Causal attribution: "because of," "due to," "from" constructions.
+        — Obligation imperatives: "you should," "try to," "make sure."
+        — Any sentence naming an emotion category.
+        — Any CTA opening a mood-logging or journaling flow.
+      </value>
+      <rationale>Barrett: emotion categories are user-constructed, not system-detected.</rationale>
+    </decision>
+
+    <decision id="D1-10">
+      <title>Baseline reset and decay</title>
+      <value>
+        Manual reset: Settings > Affect > "Reset my baseline for [bucket]"
+        Clears high-error count and cooldown. Does not delete raw check-ins.
+        Restores bucket to FORMING. Requires 7 new check-ins to re-stabilize.
+        Auto-decay: no check-ins in 45 consecutive days → bucket moves to DORMANT.
+        Re-enters FORMING on next check-in. No user action required.
+      </value>
+      <rationale>Supports major life transitions; auto-decay handles organic disuse.</rationale>
+    </decision>
+
+    <prompt_copy>
+      <note>Exact copy. Locked. Do not paraphrase in any implementation.</note>
+      <variant bucket="wday-morning">
+        This morning window has been running differently than your usual mornings.
+        Your last few check-ins here landed further from your typical range. Worth a look at
+        what's loading up before noon?
+        [Review morning blocks →]
+      </variant>
+      <variant bucket="wday-midday">
+        This afternoon pattern looks heavier than your afternoons usually do.
+        Something in this window is landing differently than your baseline. Want to look at
+        how much is stacking here?
+        [Review afternoon blocks →]
+      </variant>
+      <variant bucket="wend-any">
+        This part of your weekend has been running differently lately.
+        Your check-ins here have been outside your usual range. Worth a look at what you're
+        holding in this time?
+        [Review this block →]
+      </variant>
+    </prompt_copy>
+
+  </decisions>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CLOSED DECISIONS — SYNC ARCHITECTURE
+  ════════════════════════════════════════════════════════════ -->
+
+  <decisions domain="sync_architecture">
+
+    <decision id="D2-01">
+      <title>Conflict resolution strategy</title>
+      <value>Automerge-Swift (JSON CRDT). Pure Swift, no FFI, ARM-native via Xcode toolchain.</value>
+      <rationale>Only candidate satisfying: Swift-native, correct offline-first convergence, no server.</rationale>
+    </decision>
+
+    <decision id="D2-02">
+      <title>Y.js / Yrs eliminated</title>
+      <value>Eliminated for v1. Rust FFI bridge disproportionate for solo Apple-first build.</value>
+      <rationale>Maintenance burden: second toolchain, breaks on Xcode updates, invisible to LLDB.</rationale>
+      <revisit>If Meridian becomes multi-user and EventDoc exceeds 50MB per device — re-evaluate Yrs memory efficiency.</revisit>
+    </decision>
+
+    <decision id="D2-03">
+      <title>SQLite + LWW eliminated</title>
+      <value>Eliminated. Structurally broken under clock skew in peer mesh without NTP-synchronized server.</value>
+      <rationale>Clock skew between offline devices produces silent destructive overwrites. No history. No recovery.</rationale>
+    </decision>
+
+    <decision id="D2-04">
+      <title>Custom OT eliminated</title>
+      <value>Eliminated. Requires a linearization point (server). Incompatible with Tailscale-only architecture.</value>
+      <rationale>OT cannot converge without synchronous ordering. No server means no OT.</rationale>
+    </decision>
+
+    <decision id="D2-05">
+      <title>Document structure</title>
+      <value>Two CRDT documents per user: EventDoc and AffectDoc. Separate concerns, separate compaction.</value>
+    </decision>
+
+    <schema>
+      <document name="EventDoc">
+        <field name="schemaVersion" type="Int"/>
+        <field name="events" type="[String: EventRecord]" key="Meridian UUID"/>
+        <field name="contextProfileMappings" type="[String: [String]]" key="eventID → [profileIDs]"/>
+        <field name="softHolds" type="[String: SoftHoldRecord]"/>
+        <field name="buffers" type="[String: BufferRecord]"/>
+      </document>
+      <document name="EventRecord">
+        <field name="meridianID" type="String" note="stable Meridian UUID"/>
+        <field name="ekIdentifier" type="String?" note="EventKit external identifier; nullable"/>
+        <field name="title" type="String"/>
+        <field name="startDate" type="Date"/>
+        <field name="endDate" type="Date"/>
+        <field name="location" type="String?"/>
+        <field name="notes" type="String?"/>
+        <field name="isDecompressed" type="Bool"/>
+        <field name="localFlags" type="Set&lt;String&gt;" note="extensible; schema-version-gated"/>
+        <field name="createdAt" type="Date"/>
+        <field name="modifiedAt" type="Date" note="informational only — NOT used for conflict resolution"/>
+      </document>
+      <document name="AffectDoc">
+        <field name="schemaVersion" type="Int"/>
+        <field name="checkIns" type="[String: AffectCheckIn]" key="UUID"/>
+        <field name="bucketBaselines" type="[String: BucketBaseline]" key="bucket ID"/>
+        <field name="promptLog" type="[String: PromptLogEntry]"/>
+      </document>
+      <document name="AffectCheckIn">
+        <field name="id" type="String"/>
+        <field name="valence" type="Float" range="-1.0 to +1.0"/>
+        <field name="arousal" type="Float" range="-1.0 to +1.0"/>
+        <field name="clarity" type="Float" range="0.0 to 1.0"/>
+        <field name="bucketID" type="String"/>
+        <field name="eventRef" type="String?" note="optional link to EventRecord.meridianID"/>
+        <field name="submittedAt" type="Date"/>
+        <field name="epsilon" type="Float?" note="nil if bucket is FORMING"/>
+        <field name="isHighError" type="Bool"/>
+      </document>
+    </schema>
+
+    <merge_semantics>
+      <field name="title, location, notes"        behavior="Register: deterministic winner; loser retained in history"/>
+      <field name="startDate, endDate"             behavior="Register: deterministic winner; both values in history"/>
+      <field name="contextProfileMappings"         behavior="Set: additive merge — both offline additions survive"/>
+      <field name="localFlags"                     behavior="Set: additive merge — flags accumulate"/>
+      <field name="isDecompressed"                 behavior="Register: last-writer-wins"/>
+      <field name="checkIns (AffectDoc)"           behavior="Map: concurrent additions merge cleanly — unique UUIDs, no conflicts"/>
+    </merge_semantics>
+
+    <decision id="D2-06">
+      <title>Sync port</title>
+      <value>47301 (user-configurable, exposed as "Meridian Sync Port" in Settings). Bound to Tailscale IP only.</value>
+    </decision>
+
+    <sync_endpoints>
+      <endpoint method="GET"  path="/meridian/sync/status"     response="{ peerID, lastSyncAt, eventDocCursor, affectDocCursor }"/>
+      <endpoint method="POST" path="/meridian/sync/event-doc"  body="Automerge binary delta since cursor"/>
+      <endpoint method="POST" path="/meridian/sync/affect-doc" body="Automerge binary delta since cursor"/>
+      <auth>MeridianAuth header — shared secret from Keychain, exchanged at device onboarding</auth>
+    </sync_endpoints>
+
+    <sync_triggers>
+      <trigger>App foreground — if last sync &gt; 5 minutes ago</trigger>
+      <trigger>Explicit "Sync now" tap in Settings</trigger>
+      <trigger>Post-mutation — debounced 30-second delay</trigger>
+    </sync_triggers>
+
+    <decision id="D2-07">
+      <title>Compaction</title>
+      <value>
+        Triggers:
+        — App background, if last compaction &gt; 7 days ago.
+        — After successful Tailscale sync, if document grew &gt; 20% since last compaction.
+        — Explicit: Settings &gt; Storage &gt; "Compact Meridian data".
+        What it does: calls compact() on EventDoc and AffectDoc. Prunes unreachable history.
+        Retains last 30 days of operation history. Does not delete user-visible data.
+        Post-compaction targets: Year 1 ~1.5–2.5 MB; Year 3 ~4.5–7.5 MB.
+      </value>
+    </decision>
+
+    <decision id="D2-08">
+      <title>Schema evolution</title>
+      <value>
+        Additive changes (new optional field): increment schemaVersion; nil default; no migration required.
+        v1.0 devices preserve unknown fields as opaque CRDT state.
+        Non-additive changes (rename, type change, removal): increment schemaVersion to N;
+        run migrate(doc:from:to:) on app launch if local schemaVersion &lt; N.
+        Cross-version sync warning copy (exact):
+        "This device is running an older version of Meridian. Some events may not display
+        all fields until you update."
+      </value>
+    </decision>
+
+    <decision id="D2-09">
+      <title>Revisit trigger</title>
+      <value>If compacted EventDoc exceeds 25 MB on any device: evaluate annual segmentation first, then Yrs migration.</value>
+    </decision>
+
+    <decision id="D2-10">
+      <title>Cross-version sync</title>
+      <value>v1.0 device receiving v1.1 document: preserve unknown fields, show migration warning. No data corruption.</value>
+    </decision>
+
+  </decisions>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CLOSED DECISIONS — CULTURAL COMPETENCE
+  ════════════════════════════════════════════════════════════ -->
+
+  <decisions domain="cultural_competence">
+
+    <decision id="D3-01">
+      <title>Definition</title>
+      <value>
+        Cultural competence = the system does not require users to distort, hide, simplify,
+        or perform their lives differently in order to use the calendar effectively.
+        Not a values statement. A testable architectural property.
+      </value>
+    </decision>
+
+    <decision id="D3-01a">
+      <title>Context profile labels</title>
+      <value>
+        User-editable strings. Five named defaults. Internal identifier is a stable UUID.
+        The label is a separate editable string — not an enum.
+        Defaults: Developer, Ops, Student, Learner, Minimal.
+        Users can rename any label. Profile behavior travels with the UUID, not the label.
+        A rename does not produce a merge conflict — Automerge resolves the label string;
+        profile identity (UUID) stays intact.
+      </value>
+      <closes>v1 spec Open Question 2; Document 3 Code Audit Item 3</closes>
+    </decision>
+
+    <decision id="D3-02">
+      <title>Five testable UX properties</title>
+      <value>
+        1. Role non-exclusivity: single event assignable to multiple profiles; no hierarchical copy.
+        2. Profile label non-othering: no label implies "normal" vs. specialty accommodation.
+        3. Enrichment non-normalization: no content implicitly positions one cultural paradigm as correct.
+        4. Temporal home screen universal readability: three time states work for non-conventional schedules.
+        5. Affect check-in non-prescriptiveness: no visual or copy treatment implying a "correct" affect position.
+        Each property has explicit pass/fail criteria in Document 3.
+      </value>
+    </decision>
+
+    <decision id="D3-03">
+      <title>Enrichment unlocks</title>
+      <value>
+        Through use and affect data thresholds only. Never payment.
+        Level 0 (0–13 points): affect check-in only. No enrichment content.
+        Level 1 (≥14 points across ≥3 time windows): reflection strip + affect-matched quotes.
+        Level 2 (≥30 points across ≥5 buckets over ≥7 days): inline capacity meter + context hints.
+        Level 3 (≥60 points over ≥21 days, stable baseline): weekly pattern card + load review flow.
+        UI signal for each unlock: feature simply appears. No badges. No popups.
+      </value>
+    </decision>
+
+    <prohibited_copy>
+      <note>Apply to all system-generated strings. Zero exceptions.</note>
+      <prohibited>stress</prohibited>
+      <prohibited>anxiety</prohibited>
+      <prohibited>burnout</prohibited>
+      <prohibited>overwhelm</prohibited>
+      <prohibited>exhaustion</prohibited>
+      <prohibited>tired</prohibited>
+      <prohibited>drained</prohibited>
+      <prohibited>frustrated</prohibited>
+      <prohibited>excited</prohibited>
+      <prohibited>primary profile</prohibited>
+      <prohibited>main calendar</prohibited>
+      <prohibited>default profile (auto-applied)</prohibited>
+      <prohibited>Other (as catch-all for events)</prohibited>
+    </prohibited_copy>
+
+  </decisions>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CODE GENERATION RULES
+  ════════════════════════════════════════════════════════════ -->
+
+  <code_rules>
+    <rule>Every function fully implemented. No TODOs, stubs, or placeholder comments.</rule>
+    <rule>Functions ≤ 50 lines. Files ≤ 300 lines.</rule>
+    <rule>Separate concerns strictly: UI / logic / data / sync live in separate files.</rule>
+    <rule>No hardcoded secrets. Keychain for shared secrets and sensitive tokens.</rule>
+    <rule>No SQL string concatenation. Parameterized queries only.</rule>
+    <rule>No eval(), no innerHTML with untrusted content.</rule>
+    <rule>No UserDefaults for sensitive data. Keychain for secrets; encrypted local store for affect data.</rule>
+    <rule>HTTPS only for any external calls (rare; enrichment content is bundled).</rule>
+    <response_format>
+      Every code response must include in this order:
+      1. Assumptions (bullet list of key inferences)
+      2. What's being built (1–2 sentences)
+      3. Code block(s)
+      4. Explanation (structure rationale, watch-outs)
+      5. Usage example (copy-paste ready)
+      6. Testing checklist (3–5 concrete verification steps)
+    </response_format>
+    <coda>
+      End every response with:
+      ⬡ Meridian · Layer [N] — [Layer name] · [Current surface or decision in focus]
+      Append [CLOSED] if response closes a decision.
+      Append [NEEDS DECISION] if response surfaces an open question requiring founder input.
+    </coda>
+  </code_rules>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ACCESSIBILITY
+  ════════════════════════════════════════════════════════════ -->
+
+  <accessibility>
+    <standard>WCAG 2.1 AA minimum. Non-negotiable. Not a post-MVP item.</standard>
+    <per_component_requirements>
+      <requirement>VoiceOver: label, hint, trait</requirement>
+      <requirement>Dynamic Type: behavior at XXXL size — no truncation, no overlap</requirement>
+      <requirement>Reduce Motion: alternative animation or none</requirement>
+      <requirement>High Contrast / Grayscale: compatible rendering</requirement>
+      <requirement>Cognitive load: max simultaneous decisions on screen = 3</requirement>
+    </per_component_requirements>
+    <rules>
+      <rule>Touch targets ≥ 44×44pt</rule>
+      <rule>Color is NEVER the sole indicator of state, status, or context profile</rule>
+      <rule>No VoiceOver label that uses an emotion word or implies affect evaluation</rule>
+    </rules>
+  </accessibility>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PRIVACY
+  ════════════════════════════════════════════════════════════ -->
+
+  <privacy>
+    <rule>Affect data: local only. Never transmitted. Never displayed as a score or dimensional readout.</rule>
+    <rule>No engagement metrics: no streaks, no completion percentages, no "you were productive" copy.</rule>
+    <rule>No telemetry without explicit opt-in.</rule>
+    <rule>No enrichment content requiring a network call at display time.</rule>
+    <rule>Enrichment content: bundled or permanently cached after one user-initiated download.</rule>
+  </privacy>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       WHAT NOT TO DO
+  ════════════════════════════════════════════════════════════ -->
+
+  <prohibitions>
+    <prohibition>Do not suggest iCloud sync, cloud sync, or any server-side component.</prohibition>
+    <prohibition>Do not use emotion category words in any system-facing copy.</prohibition>
+    <prohibition>Do not re-open closed decisions without being explicitly asked.</prohibition>
+    <prohibition>Do not generate UI where color alone indicates state, status, or profile.</prohibition>
+    <prohibition>Do not add enrichment features requiring a network call at display time.</prohibition>
+    <prohibition>Do not position accessibility as a post-MVP consideration.</prohibition>
+    <prohibition>Do not generate Layer 2 or Layer 3 code while Layer 1 tests are failing.</prohibition>
+  </prohibitions>
+
+</meridian>
