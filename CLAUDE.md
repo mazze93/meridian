@@ -51,6 +51,11 @@ swift build -c release
 
 SwiftLint: add to Package.swift as a plugin once Layer 1 compiles. Run with `swift package plugin lint`.
 
+### Build Notes
+
+- **Linker warning** (expected, ignore): `building for macOS-13.0, but linking with dylib ... built for newer version 26.0` — comes from Automerge-Swift's prebuilt binary; not actionable.
+- **Dual test output** (expected): `swift test` runs two suites — XCTest (7 tests pass) and Swift Testing (shows `0 tests in 0 suites`). The second block is normal; no `@Test` macros exist yet.
+
 ---
 
 ## Repository Structure (Target)
