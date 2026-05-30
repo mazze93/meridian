@@ -377,6 +377,40 @@
       <value>v1.0 device receiving v1.1 document: preserve unknown fields, show migration warning. No data corruption.</value>
     </decision>
 
+    <decision id="D2-11">
+      <title>Local at-rest crypto primitive</title>
+      <value>
+        CryptoKit ChaChaPoly (AEAD) — same posture rationale as D2-01/D2-02.
+        Pure Swift surface, no FFI, no second toolchain, Apple-maintained, hardware-accelerated on
+        Apple Silicon. The global libsodium default is overridden here for the same reason Yrs was
+        eliminated in D2-02: a C library behind a Swift FFI bridge contradicts Meridian's Apple-only,
+        pure-Swift posture. libsodium remains the correct choice for cross-platform / server-adjacent
+        contexts (Secure Pride, Praxis-Aegis); not this one.
+        Key material: 256-bit symmetric key generated via SecRandomCopyBytes on first launch and
+        stored in Keychain (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly — usable for background
+        sync after first unlock, never escrowed to iCloud Keychain).
+      </value>
+      <rationale>Apple-platforms-only Swift package; D2-01/D2-02 posture extension.</rationale>
+    </decision>
+
+    <decision id="D2-12">
+      <title>Encryption granularity</title>
+      <value>
+        Encrypt the full Automerge save() output as opaque bytes. Never field-encrypt the CRDT payload.
+        File format on disk: magic(4) "MRDN" ‖ version(1) ‖ nonce(12) ‖ ciphertext+tag.
+        Rationale for opaque-bytes wrapping:
+        — Preserves D2-08 / D2-10 forward-compatibility: a v1.0 reader decrypts a v1.1 blob, hands the
+          plaintext to Automerge, and Automerge transparently preserves unknown fields as opaque CRDT
+          state. Field-level encryption would force the storage layer to understand the schema,
+          breaking forward-compat.
+        — Preserves Automerge's compaction guarantees: save() output is already deduplicated and
+          compacted; AEAD wrapping doesn't perturb the binary.
+        — Single AEAD authentication tag covers the entire document; tampering with any byte fails
+          decryption deterministically.
+      </value>
+      <rationale>Forward-compatibility (D2-08, D2-10) requires the storage layer to be schema-blind.</rationale>
+    </decision>
+
   </decisions>
 
   <!-- ═══════════════════════════════════════════════════════════

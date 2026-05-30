@@ -54,7 +54,7 @@ SwiftLint: add to Package.swift as a plugin once Layer 1 compiles. Run with `swi
 ### Build Notes
 
 - **Linker warning** (expected, ignore): `building for macOS-13.0, but linking with dylib ... built for newer version 26.0` — comes from Automerge-Swift's prebuilt binary; not actionable.
-- **Dual test output** (expected): `swift test` runs two suites — XCTest (7 tests pass) and Swift Testing (shows `0 tests in 0 suites`). The second block is normal; no `@Test` macros exist yet.
+- **Dual test output** (expected): `swift test` runs two suites — XCTest (20 tests pass as of 2026-05-30) and Swift Testing (shows `0 tests in 0 suites`). The second block is normal; no `@Test` macros exist yet.
 
 ---
 
@@ -120,21 +120,38 @@ The full Layer 1 pass/fail checklist is in `MERIDIAN_BUILD_CONTEXT.md` Part 4.
 |------|--------|-------|
 | 1. Package.swift + Automerge-Swift | ✅ done (2026-05-25) | Automerge-Swift pinned `from: "0.7.2"`. Manifest trimmed to `MeridianCore` only. |
 | 2. EventDoc + AffectDoc structs | ✅ done (2026-05-25) | All records Codable/Equatable/Sendable. 7/7 model tests pass (`DocumentModelTests`). |
-| 3. Init, serialization, encrypted local persistence | ⬜ NEXT | Automerge encode/decode of both docs + encrypted on-disk store keyed from Keychain. Not UserDefaults, not plaintext. Must survive app kill + relaunch. |
-| 4. Compaction logic | ⬜ pending | `compact()` on background (>7d) and post-sync (>20% growth). See Compaction Triggers. |
+| 3. Init, serialization, encrypted local persistence | ✅ done (2026-05-30) | `KeychainService` (CryptoKit, ChaChaPoly key in Keychain w/ `AfterFirstUnlockThisDeviceOnly`), `EncryptedStore` (magic ‖ version ‖ nonce ‖ AEAD; header AAD-bound; atomic write), `DocumentStore<Model>` (Codable ↔ Automerge bridge via `AutomergeEncoder`/`AutomergeDecoder`). 20/20 tests pass — incl. kill+relaunch round-trip for both docs and current-reader-loads-future-blob (D2-10 load side). Closes D2-11, D2-12. |
+| 4. Compaction logic | ⬜ NEXT | `compact()` on background (>7d) and post-sync (>20% growth). See Compaction Triggers. Automerge has no explicit `compact()` — `Document.save()` already produces the compacted form, so compaction = `Document(doc.save())`. Trigger policy lives in this step. |
 | 5. Local HTTP server on :47301 | ⬜ pending | Bind Tailscale interface only; never non-Tailscale. `MeridianAuth` header validated. |
 | 6. Peer discovery + binary delta sync | ⬜ pending | Endpoints in Sync Protocol section. |
 | 7. MeridianAuth shared secret via Keychain | ⬜ pending | Shared secret from Keychain; never hardcoded, never UserDefaults. |
 
-**Schema fields resolved this session (2026-05-25):**
+**Schema fields resolved 2026-05-25:**
 - `SoftHoldRecord`: `id`, `title`, `startDate`, `endDate`, `contextProfiles: Set<String>`, `createdAt`.
   Soft holds carry context-profile assignments (founder decision) — non-exclusive, no primary
   (D3 Property 1, audit #4); empty set = unassigned, renders with equal weight, no fallback label (audit #9).
 - `BufferRecord`: `id`, `eventRef`, `leadingSeconds`, `trailingSeconds`, `createdAt`.
   Separate leading/trailing per spec wording "before and/or after."
 
-**Next action:** Layer 1 step 3 — Automerge encode/decode for `EventDoc`/`AffectDoc` plus an
-encrypted local store whose key is held in Keychain. Do not start Layer 2/3 while Layer 1 is open.
+**Persistence architecture resolved 2026-05-30 (closes D2-11, D2-12):**
+- `KeychainService` — 256-bit symmetric key generated on first launch via `SecRandomCopyBytes`,
+  stored as `kSecClassGenericPassword` under service `com.meridian.localstore.v1`, accessible
+  `AfterFirstUnlockThisDeviceOnly` (no iCloud Keychain escrow).
+- `EncryptedStore` — file format `MRDN(4) ‖ ver(1) ‖ nonce(12) ‖ AEAD(ciphertext+tag)` using
+  CryptoKit `ChaChaPoly`. Header is bound as AAD, so tampering with the version byte or nonce
+  fails decryption. Atomic write via temp file + `FileManager.replaceItem`. `fileNotFound` is
+  distinct from `decryptionFailed` so callers can tell first-launch from corruption.
+- `DocumentStore<Model: Codable>` — bridges `EventDoc`/`AffectDoc` to Automerge via
+  `AutomergeEncoder` / `AutomergeDecoder`, persists `Document.save()` as opaque bytes (D2-12).
+- **Architectural caveat for Layer 1 step 5+ (sync):** `DocumentStore` constructs a fresh
+  `Automerge.Document` per save. Unknown future-schema fields survive the *load* side of a
+  cross-version blob (test: `testCurrentReaderLoadsFutureBlobWithUnknownFields`) but would be
+  dropped on write-back. The sync coordinator must own a long-lived `Automerge.Document` and
+  merge deltas into it directly — never round-trip through `DocumentStore.save()` during sync.
+
+**Next action:** Layer 1 step 4 — compaction policy. `Document(Document.save())` round-trip is
+the compaction primitive; build the trigger policy (background >7d, post-sync >20% growth,
+explicit Settings action) around it. Do not start Layer 2/3 while Layer 1 is open.
 
 ---
 
@@ -165,6 +182,8 @@ Full rationale for every decision is in `meridian-decisions.xml` and
 | D2-08 | Schema evolution: additive = no migration; non-additive = versioned migrate() |
 | D2-09 | Revisit trigger: compacted EventDoc > 25 MB → evaluate annual segmentation |
 | D2-10 | Cross-version sync: preserve unknown fields; show migration warning to user |
+| D2-11 | Local at-rest crypto: CryptoKit ChaChaPoly (Apple-platforms-only posture extension of D2-01/D2-02) |
+| D2-12 | Encryption granularity: wrap full Automerge `save()` as opaque bytes; never field-encrypt |
 | D3-01 | Context profiles: user-editable strings; five named defaults; stable UUID internal key |
 | D3-02 | Cultural competence = system does not require users to distort their lives |
 | D3-03 | Enrichment unlocks through use + affect thresholds only — never payment |
