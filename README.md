@@ -10,6 +10,7 @@
 [![Sync · Tailscale mesh](https://img.shields.io/badge/sync-Tailscale_mesh-5fb6c4?style=flat-square&logo=tailscale&logoColor=white)](https://tailscale.com)
 [![Data · local only](https://img.shields.io/badge/data-local_only-2ea043?style=flat-square)](#privacy-is-the-architecture-not-a-setting)
 [![At rest · ChaChaPoly AEAD](https://img.shields.io/badge/at_rest-ChaChaPoly_AEAD-9a8fce?style=flat-square)](#how-it-is-built)
+[![License · MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-d59a63?style=flat-square)](./LICENSE)
 
 ***A calendar that watches how time lands on you — and refuses to tell you what to feel about it.***
 
@@ -179,6 +180,19 @@ swift test           # run the suite (XCTest)
 Meridian is an independent project and is not affiliated with or endorsed by Dr. Barrett. It is
 simply built to take her account seriously enough to *act on it* — including the parts that ask
 the software to stay quiet.
+
+---
+
+## License
+
+[**Mozilla Public License 2.0**](./LICENSE) — chosen deliberately. MPL is *file-level* copyleft:
+improvements to Meridian's own source must stay open, so the core can never be quietly closed —
+but the code can be **embedded as a component** in a larger application (including a closed or
+App-Store-distributed one) without relicensing the whole work. That makes Meridian free for
+nonprofits and individuals to adapt, suitable to fold into local-first / on-device / sovereign
+developer workflows, and shippable as a product — without giving up the guarantee that the
+core stays open. It is compatible with the project's dependencies (Automerge-Swift · MIT,
+Swift toolchain · Apache-2.0, Tailscale · BSD) and with the GPL family downstream.
 
 <div align="center">
 <br/>
