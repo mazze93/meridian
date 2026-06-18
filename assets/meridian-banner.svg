@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-label="Meridian — a local-first calendar built on the theory of constructed emotion">
+  <title>Meridian</title>
+  <desc>A local-first calendar built on the theory of constructed emotion. A faint valence-by-arousal circumplex sits to the right of the wordmark.</desc>
+
+  <defs>
+    <!-- Ink field: dusk falling toward midnight -->
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0"   stop-color="#16203a"/>
+      <stop offset="0.55" stop-color="#0f1422"/>
+      <stop offset="1"   stop-color="#0a0c12"/>
+    </linearGradient>
+
+    <!-- The meridian: a great-circle line traced from cool to warm -->
+    <linearGradient id="meridian" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"    stop-color="#5fb6c4"/>
+      <stop offset="0.5"  stop-color="#9a8fce"/>
+      <stop offset="1"    stop-color="#d59a63"/>
+    </linearGradient>
+
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"   stop-color="#9a8fce" stop-opacity="0.22"/>
+      <stop offset="1"   stop-color="#9a8fce" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="checkin" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0"   stop-color="#f5ede0" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#d59a63" stop-opacity="0.55"/>
+      <stop offset="1"   stop-color="#d59a63" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas -->
+  <rect x="0" y="0" width="1280" height="440" rx="20" fill="url(#field)"/>
+  <ellipse cx="980" cy="220" rx="360" ry="260" fill="url(#glow)"/>
+
+  <!-- ───────── Core-affect circumplex (valence × arousal) ───────── -->
+  <g transform="translate(980 220)" font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace">
+    <!-- concentric precision rings -->
+    <circle r="150" fill="none" stroke="#f5ede0" stroke-opacity="0.10"/>
+    <circle r="110" fill="none" stroke="#9a8fce" stroke-opacity="0.16"/>
+    <circle r="70"  fill="none" stroke="#f5ede0" stroke-opacity="0.10"/>
+    <!-- axes -->
+    <line x1="-168" y1="0" x2="168" y2="0" stroke="#f5ede0" stroke-opacity="0.24"/>
+    <line x1="0" y1="-168" x2="0" y2="168" stroke="#f5ede0" stroke-opacity="0.24"/>
+    <!-- the traced meridian arc through the field -->
+    <path d="M -150 60 C -60 -130, 60 130, 150 -60" fill="none"
+          stroke="url(#meridian)" stroke-width="2.5" stroke-opacity="0.85" stroke-linecap="round"/>
+    <!-- a single check-in, located not labelled -->
+    <circle cx="86" cy="-52" r="26" fill="url(#checkin)" filter="url(#soft)"/>
+    <circle cx="86" cy="-52" r="4"  fill="#f5ede0"/>
+    <!-- axis legends -->
+    <text x="176" y="4"   fill="#f5ede0" fill-opacity="0.42" font-size="13" letter-spacing="1.5">arousal +</text>
+    <text x="-176" y="4"  fill="#f5ede0" fill-opacity="0.30" font-size="13" letter-spacing="1.5" text-anchor="end">arousal −</text>
+    <text x="0" y="-178"  fill="#f5ede0" fill-opacity="0.42" font-size="13" letter-spacing="1.5" text-anchor="middle">valence +</text>
+    <text x="0" y="190"   fill="#f5ede0" fill-opacity="0.30" font-size="13" letter-spacing="1.5" text-anchor="middle">valence −</text>
+  </g>
+
+  <!-- ───────── Wordmark ───────── -->
+  <!-- hexagon mark (⬡) -->
+  <g transform="translate(132 132)">
+    <path d="M0,-30 L26,-15 L26,15 L0,30 L-26,15 L-26,-15 Z"
+          fill="none" stroke="url(#meridian)" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle r="3.5" fill="#d59a63"/>
+  </g>
+
+  <text x="110" y="262" font-family="'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif"
+        font-size="104" fill="#f5ede0" letter-spacing="1">Meridian</text>
+
+  <!-- hairline rule -->
+  <line x1="113" y1="296" x2="585" y2="296" stroke="#f5ede0" stroke-opacity="0.18"/>
+
+  <text x="114" y="332" font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace"
+        font-size="17.5" fill="#f5ede0" fill-opacity="0.66" letter-spacing="3.5">A LOCAL-FIRST CALENDAR FOR CONSTRUCTED TIME</text>
+  <text x="114" y="362" font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace"
+        font-size="14" fill="#f5ede0" fill-opacity="0.40" letter-spacing="2.5">no cloud · no server · sync over your own mesh</text>
+</svg>
