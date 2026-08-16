@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - ".github/workflows/tests.yml"
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Test
+        run: swift test --parallel
